@@ -1,0 +1,33 @@
+{
+  "listen": ":8080",
+  "public_base_url": "https://bridge.example.org",
+  "actor_name": "discourse",
+  "state_file": "./state.json",
+  "repo_url": "https://f1.cyberwild.org/forgeadmin/graft",
+  "poll_interval": "30s",
+  "pass_timeout": "2m",
+
+  "mappings": [
+    {
+      "topic_id": 100,
+      "note_uri": "https://f1.cyberwild.org/actors/federation-x/notes/7"
+    }
+  ],
+  "allow_title_matching": false,
+  "allow_insecure_http": false,
+  "admin_token": "",
+  "allowed_categories": [3],
+  "max_content_runes": 8000,
+  "max_deliveries_per_pass": 20,
+
+  "graft": {
+    "base_url": "https://f1.cyberwild.org",
+    "series": ["federation-x"]
+  },
+  "discourse": {
+    "base_url": "https://forum.example.org",
+    "api_key": "REPLACE_ME",
+    "api_username": "system",
+    "max_posts": 50
+  }
+}
