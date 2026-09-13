@@ -42,6 +42,14 @@ type Options struct {
 	MaxContentRunes int
 	// MaxDeliveriesPerPass bounds outbound comments per pass.
 	MaxDeliveriesPerPass int
+	// BotUsername is the Discourse account the bridge itself posts as
+	// (discourse.api_username). A post authored by this account is
+	// always the bridge's own reverse-mirror (see reverseGraftToDiscourse)
+	// — forwarding it back to Graft would create a duplicate comment
+	// every single time a native Forgejo/Radicle comment gets mirrored
+	// out, since Graft's own outbound "via Fediverse" echo guard only
+	// catches the *second* lap, not this first spurious one.
+	BotUsername string
 }
 
 // Bridge reconciles Discourse topics and Graft-mirrored repo issues.
@@ -257,6 +265,12 @@ func (b *Bridge) forwardDiscourseToGraft(ctx context.Context, topics []discourse
 		// post_number 1 is the topic itself — the issue body, which Graft
 		// mirrors create-only and has no reply path for.
 		if p.PostNumber <= 1 {
+			continue
+		}
+		// A post authored by the bridge's own bot account is always its
+		// own reverse-mirror (see reverseGraftToDiscourse) — never a real
+		// reply to forward back.
+		if b.Opts.BotUsername != "" && p.Username == b.Opts.BotUsername {
 			continue
 		}
 		if !b.categoryAllowed(category[p.TopicID]) {

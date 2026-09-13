@@ -169,6 +169,23 @@ than a bare bool, and `saveLocked` prunes anything older than
 `dedupRetention` (180 days — far past any realistic in-flight window)
 before every write.
 
+### M8 — the bridge's own reverse-mirrors got forwarded back as new replies
+`forwardDiscourseToGraft` forwards every post past `post_number` 1 in a
+bound topic, with nothing checking who wrote it — including the bridge's
+own bot account, which `reverseGraftToDiscourse` uses to post a mirror of
+every native Forgejo/Radicle comment. Every native comment mirrored to
+Discourse therefore got picked back up on the next pass and forwarded to
+Graft as if it were a fresh human reply, producing a duplicate comment
+each time. Graft's own outbound "via Fediverse" echo guard stops this
+after one round (that duplicate's own reflection back into the outbox
+does carry the marker), so it's a single spurious duplicate per native
+comment, not an unbounded loop — still real noise on every mirrored
+comment.
+**Fix:** `Options.BotUsername` (set from `discourse.api_username`) is
+checked in `forwardDiscourseToGraft` — a post authored by the bridge's
+own account is always its own reverse-mirror and is now skipped
+unconditionally. Covered by `TestForwardSkipsBotsOwnPost`.
+
 ## Not addressed
 
 - Edits/deletes are not propagated (Graft mirrors create-only).

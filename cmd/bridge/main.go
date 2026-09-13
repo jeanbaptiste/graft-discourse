@@ -94,6 +94,7 @@ func main() {
 			AllowedCategories:    categorySet(cfg.AllowedCategories),
 			MaxContentRunes:      cfg.MaxContentRunes,
 			MaxDeliveriesPerPass: cfg.MaxDeliveriesPerPass,
+			BotUsername:          cfg.Discourse.APIUsername,
 		},
 		Discourse: dc,
 		Graft:     gc,
