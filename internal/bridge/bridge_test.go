@@ -222,6 +222,40 @@ func TestReverseDropsFediverseEcho(t *testing.T) {
 	}
 }
 
+// TestForwardSkipsBotsOwnPost reproduces the duplicate-comment bug: a
+// native Forgejo/Radicle comment gets mirrored into Discourse by the
+// bridge's own bot account (reverseGraftToDiscourse), and on the very
+// next pass that same post — authored by the bot, not a real user —
+// must not be picked back up and forwarded to Graft as if it were a
+// fresh reply. Without BotUsername set, this failed: the bot's own post
+// (post_number 2, no "via Fediverse" marker to catch it) sailed through.
+func TestForwardSkipsBotsOwnPost(t *testing.T) {
+	issueURI := ap.NoteURI(testHost, "fedx", 7)
+	issueURL := "https://forgejo.example/fedx/issues/7"
+
+	g := &fakeGraft{outbox: fluxOutbox(issueURI, issueURL)}
+	d := &fakeDiscourse{
+		topics: []discourse.Topic{{ID: 100, Title: "Fix the flux capacitor"}},
+		posts: []discourse.Post{
+			{ID: 1000, TopicID: 100, PostNumber: 2, Username: "bridge-bot", Raw: "**Comment on the repository:**\n\nFixed in #12"},
+		},
+	}
+	b := &Bridge{
+		GraftHost: testHost,
+		Series:    []string{"fedx"},
+		Opts:      Options{AllowTitleMatching: true, BotUsername: "bridge-bot"},
+		Discourse: d,
+		Graft:     g,
+		State:     newTestState(t),
+	}
+	if err := b.RunOnce(context.Background()); err != nil {
+		t.Fatalf("RunOnce: %v", err)
+	}
+	if len(g.replies) != 0 {
+		t.Fatalf("bot's own post was forwarded back to Graft: %+v", g.replies)
+	}
+}
+
 func TestBindValidatesNote(t *testing.T) {
 	issueURI := ap.NoteURI(testHost, "fedx", 7)
 	issueURL := "https://forgejo.example/fedx/issues/7"
