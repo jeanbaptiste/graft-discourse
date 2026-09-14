@@ -85,9 +85,10 @@ func main() {
 	dc := discourse.New(cfg.Discourse.BaseURL, cfg.Discourse.APIKey, cfg.Discourse.APIUsername, discoursePolicy.Client())
 
 	b := &bridge.Bridge{
-		GraftHost: graftHost,
-		Series:    cfg.Graft.Series,
-		MaxPosts:  cfg.Discourse.MaxPosts,
+		GraftHost:        graftHost,
+		Series:           cfg.Graft.Series,
+		MaxPosts:         cfg.Discourse.MaxPosts,
+		DiscourseBaseURL: cfg.Discourse.BaseURL,
 		Opts: bridge.Options{
 			Explicit:             explicitMappings(cfg.Mappings),
 			AllowTitleMatching:   cfg.AllowTitleMatching,

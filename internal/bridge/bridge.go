@@ -24,7 +24,7 @@ type discourseAPI interface {
 // graftAPI is the subset of the Graft client the bridge needs.
 type graftAPI interface {
 	Outbox(ctx context.Context, series string) (*ap.OrderedCollection, error)
-	ReplyToIssue(ctx context.Context, series, noteURI, content string) error
+	ReplyToIssue(ctx context.Context, series, noteURI, content, sourceURL string) error
 }
 
 // Options are the security-relevant knobs of a bridge pass.
@@ -56,6 +56,11 @@ type Options struct {
 type Bridge struct {
 	GraftHost string
 	Series    []string
+	// DiscourseBaseURL builds each delivered reply's public permalink
+	// (https://<host>/t/<slug>/<topic_id>/<post_number>) for Graft's wiki
+	// trackback link — set once from config, distinct from Discourse's
+	// own API base URL only in that this one is guaranteed browser-facing.
+	DiscourseBaseURL string
 	// MaxPosts bounds how many of the most recent Discourse posts each pass
 	// inspects (0 = no bound).
 	MaxPosts int
@@ -242,8 +247,10 @@ func (b *Bridge) applyTitleMatching(topics []discourse.Topic, notesBySeries map[
 // Create{Note} activities whose inReplyTo is the topic's Graft issue note.
 func (b *Bridge) forwardDiscourseToGraft(ctx context.Context, topics []discourse.Topic) error {
 	category := make(map[int64]int64, len(topics))
+	slug := make(map[int64]string, len(topics))
 	for _, t := range topics {
 		category[t.ID] = t.CategoryID
+		slug[t.ID] = t.Slug
 	}
 
 	posts, err := b.Discourse.LatestPosts(ctx)
@@ -288,7 +295,11 @@ func (b *Bridge) forwardDiscourseToGraft(ctx context.Context, topics []discourse
 			continue
 		}
 		content := truncateRunes("**via Discourse, @"+p.Username+":**\n\n"+p.Raw, b.maxContent())
-		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content); err != nil {
+		sourceURL := ""
+		if b.DiscourseBaseURL != "" && slug[p.TopicID] != "" {
+			sourceURL = fmt.Sprintf("%s/t/%s/%d/%d", strings.TrimRight(b.DiscourseBaseURL, "/"), slug[p.TopicID], p.TopicID, p.PostNumber)
+		}
+		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content, sourceURL); err != nil {
 			b.logf(slog.LevelError, "deliver reply failed", "post", p.ID, "topic", p.TopicID, "err", err)
 			continue
 		}

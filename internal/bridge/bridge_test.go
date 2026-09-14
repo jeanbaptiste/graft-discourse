@@ -14,7 +14,7 @@ import (
 const testHost = "g.example"
 
 type replyCall struct {
-	series, noteURI, content string
+	series, noteURI, content, sourceURL string
 }
 
 type fakeGraft struct {
@@ -26,8 +26,8 @@ func (f *fakeGraft) Outbox(_ context.Context, _ string) (*ap.OrderedCollection, 
 	return f.outbox, nil
 }
 
-func (f *fakeGraft) ReplyToIssue(_ context.Context, series, noteURI, content string) error {
-	f.replies = append(f.replies, replyCall{series, noteURI, content})
+func (f *fakeGraft) ReplyToIssue(_ context.Context, series, noteURI, content, sourceURL string) error {
+	f.replies = append(f.replies, replyCall{series, noteURI, content, sourceURL})
 	return nil
 }
 
