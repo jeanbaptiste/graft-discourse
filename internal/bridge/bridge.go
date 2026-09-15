@@ -242,8 +242,10 @@ func (b *Bridge) applyTitleMatching(topics []discourse.Topic, notesBySeries map[
 // Create{Note} activities whose inReplyTo is the topic's Graft issue note.
 func (b *Bridge) forwardDiscourseToGraft(ctx context.Context, topics []discourse.Topic) error {
 	category := make(map[int64]int64, len(topics))
+	slug := make(map[int64]string, len(topics))
 	for _, t := range topics {
 		category[t.ID] = t.CategoryID
+		slug[t.ID] = t.Slug
 	}
 
 	posts, err := b.Discourse.LatestPosts(ctx)
@@ -290,7 +292,7 @@ func (b *Bridge) forwardDiscourseToGraft(ctx context.Context, topics []discourse
 		content := truncateRunes("**via Discourse, @"+p.Username+":**\n\n"+p.Raw, b.maxContent())
 		// Generate trackback URL to the original Discourse post
 		// TODO: get BaseURL from config instead of hardcoding
-		sourceURL := fmt.Sprintf("https://discourse.cyberwild.org/t/x/%d/%d", p.TopicID, p.PostNumber)
+		sourceURL := fmt.Sprintf("https://discourse.cyberwild.org/t/%s/%d/%d", slug[p.TopicID], p.TopicID, p.PostNumber)
 		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content, sourceURL); err != nil {
 			b.logf(slog.LevelError, "deliver reply failed", "post", p.ID, "topic", p.TopicID, "err", err)
 			continue
