@@ -24,7 +24,7 @@ type discourseAPI interface {
 // graftAPI is the subset of the Graft client the bridge needs.
 type graftAPI interface {
 	Outbox(ctx context.Context, series string) (*ap.OrderedCollection, error)
-	ReplyToIssue(ctx context.Context, series, noteURI, content string) error
+	ReplyToIssue(ctx context.Context, series, noteURI, content, sourceURL string) error
 }
 
 // Options are the security-relevant knobs of a bridge pass.
@@ -288,7 +288,10 @@ func (b *Bridge) forwardDiscourseToGraft(ctx context.Context, topics []discourse
 			continue
 		}
 		content := truncateRunes("**via Discourse, @"+p.Username+":**\n\n"+p.Raw, b.maxContent())
-		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content); err != nil {
+		// Generate trackback URL to the original Discourse post
+		// TODO: get BaseURL from config instead of hardcoding
+		sourceURL := fmt.Sprintf("https://discourse.cyberwild.org/t/x/%d/%d", p.TopicID, p.PostNumber)
+		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content, sourceURL); err != nil {
 			b.logf(slog.LevelError, "deliver reply failed", "post", p.ID, "topic", p.TopicID, "err", err)
 			continue
 		}

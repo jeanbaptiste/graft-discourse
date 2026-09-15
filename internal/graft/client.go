@@ -89,8 +89,9 @@ func (c *Client) Outbox(ctx context.Context, series string) (*ap.OrderedCollecti
 
 // ReplyToIssue delivers a signed Create{Note} to the series inbox whose
 // inReplyTo points at issueOrPatchNoteURI. Graft routes it as a comment on
-// the underlying Forgejo/Radicle issue or patch.
-func (c *Client) ReplyToIssue(ctx context.Context, series, issueOrPatchNoteURI, content string) error {
+// the underlying Forgejo/Radicle issue or patch. sourceURL is the link back
+// to the original post on the social platform (e.g. Discourse post URL).
+func (c *Client) ReplyToIssue(ctx context.Context, series, issueOrPatchNoteURI, content, sourceURL string) error {
 	a, err := c.Actor(ctx, series)
 	if err != nil {
 		return fmt.Errorf("resolve %s actor: %w", series, err)
@@ -109,6 +110,7 @@ func (c *Client) ReplyToIssue(ctx context.Context, series, issueOrPatchNoteURI, 
 		AttributedTo: c.ActorURL,
 		InReplyTo:    issueOrPatchNoteURI,
 		Content:      content,
+		URL:          sourceURL,
 		Published:    now.Format(time.RFC3339),
 		To:           []string{ap.PublicAudience},
 	}
