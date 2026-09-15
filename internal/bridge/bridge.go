@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 
 	"graftdiscourse/internal/ap"
@@ -60,6 +61,11 @@ type Bridge struct {
 	// inspects (0 = no bound).
 	MaxPosts int
 	Opts     Options
+	// WebURL is Discourse's public, browser-facing base URL, used for the
+	// trackback link sent along with every forwarded post. It can differ
+	// from the API base URL when the bridge reaches Discourse over an
+	// internal address.
+	WebURL string
 
 	Discourse discourseAPI
 	Graft     graftAPI
@@ -290,10 +296,7 @@ func (b *Bridge) forwardDiscourseToGraft(ctx context.Context, topics []discourse
 			continue
 		}
 		content := truncateRunes("**via Discourse, @"+p.Username+":**\n\n"+p.Raw, b.maxContent())
-		// Generate trackback URL to the original Discourse post
-		// TODO: get BaseURL from config instead of hardcoding
-		sourceURL := fmt.Sprintf("https://discourse.cyberwild.org/t/%s/%d/%d", slug[p.TopicID], p.TopicID, p.PostNumber)
-		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content, sourceURL); err != nil {
+		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content, postURL(b.WebURL, slug[p.TopicID], p.TopicID, p.PostNumber)); err != nil {
 			b.logf(slog.LevelError, "deliver reply failed", "post", p.ID, "topic", p.TopicID, "err", err)
 			continue
 		}
@@ -382,4 +385,20 @@ func truncateRunes(s string, n int) string {
 		return s
 	}
 	return string(r[:n])
+}
+
+// postURL is the public permalink of one Discourse post — the trackback
+// Graft shows next to the mirrored reply. Discourse also routes
+// /t/{topic}/{post} without the slug, which covers a topic missing from
+// this pass's topic list. Empty when no web URL is configured: Graft
+// treats an empty url as "no trackback" rather than an error.
+func postURL(webURL, slug string, topicID int64, postNumber int) string {
+	if webURL == "" {
+		return ""
+	}
+	base := strings.TrimRight(webURL, "/")
+	if slug == "" {
+		return fmt.Sprintf("%s/t/%d/%d", base, topicID, postNumber)
+	}
+	return fmt.Sprintf("%s/t/%s/%d/%d", base, url.PathEscape(slug), topicID, postNumber)
 }

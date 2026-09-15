@@ -88,6 +88,7 @@ func main() {
 		GraftHost: graftHost,
 		Series:    cfg.Graft.Series,
 		MaxPosts:  cfg.Discourse.MaxPosts,
+		WebURL:    discourseWebURL(cfg),
 		Opts: bridge.Options{
 			Explicit:             explicitMappings(cfg.Mappings),
 			AllowTitleMatching:   cfg.AllowTitleMatching,
@@ -235,4 +236,13 @@ func hostOf(base string) string {
 		s = s[:i]
 	}
 	return s
+}
+
+// discourseWebURL is where trackback links point: discourse.public_url
+// when set, else the API base URL.
+func discourseWebURL(cfg *config.Config) string {
+	if cfg.Discourse.PublicURL != "" {
+		return cfg.Discourse.PublicURL
+	}
+	return cfg.Discourse.BaseURL
 }

@@ -14,7 +14,7 @@ import (
 const testHost = "g.example"
 
 type replyCall struct {
-	series, noteURI, content string
+	series, noteURI, content, sourceURL string
 }
 
 type fakeGraft struct {
@@ -26,8 +26,8 @@ func (f *fakeGraft) Outbox(_ context.Context, _ string) (*ap.OrderedCollection, 
 	return f.outbox, nil
 }
 
-func (f *fakeGraft) ReplyToIssue(_ context.Context, series, noteURI, content string) error {
-	f.replies = append(f.replies, replyCall{series, noteURI, content})
+func (f *fakeGraft) ReplyToIssue(_ context.Context, series, noteURI, content, sourceURL string) error {
+	f.replies = append(f.replies, replyCall{series, noteURI, content, sourceURL})
 	return nil
 }
 
@@ -286,5 +286,23 @@ func TestBindValidatesNote(t *testing.T) {
 	}
 	if _, ok := b.State.TopicNote(100); ok {
 		t.Fatal("mapping not removed")
+	}
+}
+
+func TestPostURL(t *testing.T) {
+	cases := []struct {
+		web, slug string
+		topic     int64
+		num       int
+		want      string
+	}{
+		{"https://discourse.example/", "my-topic", 12, 3, "https://discourse.example/t/my-topic/12/3"},
+		{"https://discourse.example", "", 12, 3, "https://discourse.example/t/12/3"},
+		{"", "my-topic", 12, 3, ""},
+	}
+	for _, c := range cases {
+		if got := postURL(c.web, c.slug, c.topic, c.num); got != c.want {
+			t.Errorf("postURL(%q,%q,%d,%d) = %q, want %q", c.web, c.slug, c.topic, c.num, got, c.want)
+		}
 	}
 }

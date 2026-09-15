@@ -57,7 +57,10 @@ type Config struct {
 	} `json:"graft"`
 
 	Discourse struct {
-		BaseURL     string `json:"base_url"`
+		BaseURL string `json:"base_url"`
+		// PublicURL is the browser-facing Discourse URL used in trackback
+		// links; defaults to BaseURL.
+		PublicURL   string `json:"public_url"`
 		APIKey      string `json:"api_key"`
 		APIUsername string `json:"api_username"`
 		MaxPosts    int    `json:"max_posts"`
